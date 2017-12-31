@@ -3,8 +3,12 @@ deps
 *.o
 *.beam
 *.plt
-erl_crash.dump
-ebin/*.beam
-rel/example_project
-.concrete/DEV_MODE
+*.dump
+*.app
+*~
+doc/*
+!doc/overview.edoc
+!doc/*.md
 .rebar
+_build
+.*.sw?
