@@ -69,7 +69,9 @@
           object_key_type = string :: string | scalar | value,
           space = 0 :: non_neg_integer(),
           indent = 0 :: non_neg_integer(),
-          undefined_as_null = false :: boolean()
+          undefined_as_null = false :: boolean(),
+          hinted_as_str=[] ::[jsone:jsone_value()],
+          next_as_str = 0 :: non_neg_integer()
          }).
 -define(OPT, #encode_opt_v2).
 -type opt() :: #encode_opt_v2{}.
@@ -134,6 +136,7 @@ value({{json_utf8, T}}, Nexts, Buf, Opt) ->
 value(Value, Nexts, Buf, Opt) when is_integer(Value) -> next(Nexts, <<Buf/binary, (integer_to_binary(Value))/binary>>, Opt);
 value(Value, Nexts, Buf, Opt) when is_float(Value)   -> next(Nexts, <<Buf/binary, (float_to_binary(Value, Opt?OPT.float_format))/binary>>, Opt);
 value(Value, Nexts, Buf, Opt) when ?IS_STR(Value)    -> string(Value, Nexts, Buf, Opt);
+value(Value, Nexts, Buf, Opt= ?OPT{next_as_str = 1}) -> string(Value, Nexts, Buf, Opt?OPT{next_as_str = 0});
 value({{_,_,_},{_,_,_}} = Value, Nexts, Buf, Opt)    -> datetime(Value, Nexts, Buf, Opt);
 value({Value}, Nexts, Buf, Opt)                      -> object(Value, Nexts, Buf, Opt);
 value([{}], Nexts, Buf, Opt)                         -> object([], Nexts, Buf, Opt);
@@ -146,8 +149,10 @@ value(Value, Nexts, Buf, Opt)                        -> ?ERROR(value, [Value, Ne
 -spec string(jsone:json_string(), [next()], binary(), opt()) -> encode_result().
 string(<<Str/binary>>, Nexts, Buf, Opt) ->
     escape_string(Str, Nexts, <<Buf/binary, $">>, Opt);
-string(Str, Nexts, Buf, Opt) ->
-    string(atom_to_binary(Str, utf8), Nexts, Buf, Opt).
+string(Str, Nexts, Buf, Opt) when ?IS_STR(Str) ->
+    string(atom_to_binary(Str, utf8), Nexts, Buf, Opt);
+string(Str, Next, Buf, Opt) ->
+    string(list_to_binary(Str), Next, Buf, Opt).
 
 -spec datetime(calendar:datetime(), [next()], binary(), opt()) -> encode_result().
 datetime({{Y,M,D}, {H,Mi,S}}, Nexts, Buf, Opt) when ?IS_DATETIME(Y,M,D,H,Mi,S) ->
@@ -202,7 +207,10 @@ format_tz_(S) ->
 
 -spec object_key(jsone:json_value(), [next()], binary(), opt()) -> encode_result().
 object_key(Key, Nexts, Buf, Opt) when ?IS_STR(Key) ->
-    string(Key, Nexts, Buf, Opt);
+    case is_hinted_as_str(Opt?OPT.hinted_as_str, Key) of
+        true -> string(Key, Nexts, Buf, Opt?OPT{next_as_str = 1});
+        false-> string(Key, Nexts, Buf, Opt)
+    end;
 object_key(Key, Nexts, Buf, Opt = ?OPT{object_key_type = scalar}) when is_number(Key) ->
     value(Key, [{char, $"} | Nexts], <<Buf/binary, $">>, Opt);
 object_key(Key = {{Y,M,D},{H,Mi,S}}, Nexts, Buf, Opt = ?OPT{object_key_type = Type}) when ?IS_DATETIME(Y,M,D,H,Mi,S), Type =/= string ->
@@ -333,6 +341,13 @@ pp_newline(Buf, Level, Opt) -> pp_newline(Buf, Level, 0, Opt).
 pp_newline(Buf, _, _,     ?OPT{indent = 0}) -> Buf;
 pp_newline(Buf, L, Extra, ?OPT{indent = N}) -> padding(<<Buf/binary, $\n>>, Extra * N + length(L) * N).
 
+-spec is_hinted_as_str([jsone:json_value()],jsone:json_value())-> boolean().
+is_hinted_as_str([],_)-> false;
+is_hinted_as_str([H|_],H)-> true;
+is_hinted_as_str([_|T],A)-> is_hinted_as_str(T,A).
+
+
+
 -spec pp_newline_or_space(binary(), list(), opt()) -> binary().
 pp_newline_or_space(Buf, _, Opt = ?OPT{indent = 0}) -> pp_space(Buf, Opt);
 pp_newline_or_space(Buf, L, Opt)                    -> pp_newline(Buf, L, Opt).
@@ -365,6 +380,8 @@ parse_option([{space, N}|T], Opt) when is_integer(N), N >= 0 ->
     parse_option(T, Opt?OPT{space = N});
 parse_option([{indent, N}|T], Opt) when is_integer(N), N >= 0 ->
     parse_option(T, Opt?OPT{indent = N});
+parse_option([{hinted_as_str,SArray}|T], Opt) ->
+    parse_option(T,Opt?OPT{hinted_as_str = SArray});
 parse_option([{object_key_type, Type}|T], Opt) when Type =:= string; Type =:= scalar; Type =:= value ->
     parse_option(T, Opt?OPT{object_key_type = Type});
 parse_option([{datetime_format, Fmt}|T], Opt) ->
