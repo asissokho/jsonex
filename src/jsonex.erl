@@ -24,7 +24,7 @@
 %%% THE SOFTWARE.
 %%%
 %%%---------------------------------------------------------------------------------------
--module(jsone).
+-module(jsonex).
 
 %%--------------------------------------------------------------------------------
 %% Exported API
@@ -315,7 +315,7 @@ try_decode(Json) ->
 %% '''
 -spec try_decode(binary(), [decode_option()]) -> {ok, json_value(), Remainings::binary()} | {error, {Reason::term(), [stack_item()]}}.
 try_decode(Json, Options) ->
-    jsone_decode:decode(Json, Options).
+    jsonex_decode:decode(Json, Options).
 
 %% @equiv encode(JsonValue, [])
 -spec encode(json_value()) -> binary().
@@ -364,4 +364,4 @@ try_encode(JsonValue) ->
 %% '''
 -spec try_encode(json_value(), [encode_option()]) -> {ok, binary()} | {error, {Reason::term(), [stack_item()]}}.
 try_encode(JsonValue, Options) ->
-    jsone_encode:encode(JsonValue, Options).
+    jsonex_encode:encode(JsonValue, Options).

@@ -1,4 +1,4 @@
-{application,jsone,
+{application,jsonex,
              [{description,"Erlang JSON Library"},
               {vsn,"0.1.0"},
               {registered,[]},

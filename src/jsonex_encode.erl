@@ -25,7 +25,7 @@
 %%% THE SOFTWARE.
 %%%
 %%%---------------------------------------------------------------------------------------
--module(jsone_encode).
+-module(jsonex_encode).
 
 -ifdef(ENABLE_HIPE).
 -compile([native, {hipe, [o3]}]).
