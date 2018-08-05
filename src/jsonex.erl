@@ -36,6 +36,14 @@
          try_encode/1, try_encode/2
         ]).
 
+-ifdef('FUN_STACKTRACE').
+-define(CAPTURE_STACKTRACE, ).
+-define(GET_STACKTRACE, erlang:get_stacktrace()).
+-else.
+-define(CAPTURE_STACKTRACE, :__StackTrace).
+-define(GET_STACKTRACE, __StackTrace).
+-endif
+
 -export_type([
               json_value/0,
               json_boolean/0,
@@ -48,7 +56,7 @@
               json_object_format_tuple/0,
               json_object_format_proplist/0,
               json_object_format_map/0,
-              json_scalar/0,
+              %json_scalar/0,
 
               encode_option/0,
               decode_option/0,
@@ -122,7 +130,7 @@
 -type json_object_format_map() :: map().
 -endif.
 
--type json_scalar() :: json_boolean() | json_number() | json_string().
+%-type json_scalar() :: json_boolean() | json_number() | json_string().
 
 -type float_format_option() :: {scientific, Decimals :: 0..249}
                              | {decimals, Decimals :: 0..253}
@@ -293,8 +301,8 @@ decode(Json, Options) ->
         {ok, Value, _} = try_decode(Json, Options),
         Value
     catch
-        error:{badmatch, {error, {Reason, [StackItem]}}} ->
-            erlang:raise(error, Reason, [StackItem | erlang:get_stacktrace()])
+        error:{badmatch, {error, {Reason, [StackItem]}}} ?CAPTURE_STACKTRACE ->
+            erlang:raise(error, Reason, [StackItem | ?GET_STACKTRACE])
     end.
 
 %% @equiv try_decode(Json, [])
@@ -342,8 +350,8 @@ encode(JsonValue, Options) ->
         {ok, Binary} = try_encode(JsonValue, Options),
         Binary
     catch
-        error:{badmatch, {error, {Reason, [StackItem]}}} ->
-            erlang:raise(error, Reason, [StackItem | erlang:get_stacktrace()])
+        error:{badmatch, {error, {Reason, [StackItem]}}} ?CAPTURE_STACKTRACE->
+            erlang:raise(error, Reason, [StackItem | ?GET_STACKTRACE])
     end.
 
 %% @equiv try_encode(JsonValue, [])
