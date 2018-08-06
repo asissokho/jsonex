@@ -42,7 +42,7 @@
 -else.
 -define(CAPTURE_STACKTRACE, :__StackTrace).
 -define(GET_STACKTRACE, __StackTrace).
--endif
+-endif.
 
 -export_type([
               json_value/0,
